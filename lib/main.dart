@@ -45,7 +45,7 @@ class _MainShellState extends State<MainShell> {
   Future<void> _openDetail(StationeryItem item) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => DetailBarangPage(item: item)),
+      MaterialPageRoute(builder: (_) => DetailPage(item: item)),
     );
     setState(() {}); // refresh beranda setelah porsi diubah
   }
@@ -294,241 +294,193 @@ class _FoodCard extends StatelessWidget {
 
 // ---------- Halaman Detail/Edit (STATEFUL) ----------
 
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Detail Barang',
-      theme: ThemeData(
-        useMaterial3: false,
-        primaryColor: const Color(0xFF3F51B5),
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF3F51B5)),
-      ),
-      home: DetailBarangPage(item: StationeryItem(
-        id: 1,
-        name: 'Pulpen',
-        description: 'Pulpen tinta hitam, nyaman digenggam, ujung 0.5 mm.',
-        stock: 11,
-        price: 50000,
-      )), 
-    );
-  }
-
-
-class DetailBarangPage extends StatefulWidget {
+class DetailPage extends StatefulWidget {
   final StationeryItem item;
-  const DetailBarangPage({super.key, required this.item});
+  const DetailPage({super.key, required this.item});
 
   @override
-  State<DetailBarangPage> createState() => _DetailBarangPageState();
+  State<DetailPage> createState() => _DetailPageState();
 }
 
-class _DetailBarangPageState extends State<DetailBarangPage> {
-  static const Color warnaUtama = Color(0xFF3F51B5);
+class _DetailPageState extends State<DetailPage> {
+  late int _qty;
+  late final TextEditingController _ctrl;
 
-  final TextEditingController _deskripsiController = TextEditingController(
-    text: widget.item.description,
-  );
-  final TextEditingController _stokController =
-      TextEditingController(text: widget.item.stock.toString());
-  final TextEditingController _hargaController =
-      TextEditingController(text: widget.item.price.toString());
+  @override
+  void initState() {
+    super.initState();
+    _qty = widget.item.stock;
+    _ctrl = TextEditingController(text: '$_qty');
+  }
 
   @override
   void dispose() {
-    _deskripsiController.dispose();
-    _stokController.dispose();
-    _hargaController.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
-  void _simpan() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Tersimpan: stok ${_stokController.text} pcs, '
-          'harga Rp ${_hargaController.text}',
-        ),
-      ),
+  void _set(int v) {
+    if (v < 0) v = 0;
+    if (v > 99) v = 99;
+    setState(() => _qty = v);
+    _ctrl.value = TextEditingValue(
+      text: '$v',
+      selection: TextSelection.collapsed(offset: '$v'.length),
     );
   }
 
-  InputDecoration _dekorasi({
-    required String label,
-    required IconData ikon,
-    bool isDollar = false,
-  }) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(fontSize: 12),
-      floatingLabelBehavior: FloatingLabelBehavior.always,
-      prefixIcon: isDollar
-          ? const Padding(
-              padding: EdgeInsets.all(14),
-              child: Text(
-                '\$',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
-              ),
-            )
-          : Icon(ikon, color: Colors.black87),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: const BorderSide(color: Colors.black38),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: const BorderSide(color: Colors.black38),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: const BorderSide(color: warnaUtama, width: 2),
-      ),
-    );
+  void _save() {
+    widget.item.stock = _qty;
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: kInk,
+      content: Text('Pesanan ${widget.item.name} disimpan: $_qty Pcs'),
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
+    final item = widget.item;
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: warnaUtama,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.maybePop(context),
-        ),
-        title: const Text(
-          'Pulpen',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Gambar produk
-            ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: SizedBox(
-                height: 180,
-                width: double.infinity,
-                child: Image.asset(
-                  'assets/pulpen.jpg',
-                  fit: BoxFit.cover,
-                  // Jika gambar belum ditambahkan, tampilkan placeholder
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: Colors.grey.shade300,
-                    child: const Icon(
-                      Icons.edit,
-                      size: 64,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ),
-              ),
+      body: Column(
+        children: [
+          Header(
+            title: item.name,
+            subtitle: ' Jumlah Pcs',
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
             ),
-            const SizedBox(height: 16),
-
-            // Nama dan harga satuan
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: const [
-                Text(
-                  'Pulpen',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Hero(
+                  tag: item.name,
+                  child: foodImage(item.imageUrl, h: 220, radius: 24),
                 ),
-                Text(
-                  'Rp 3.000 / pcs',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E9E4F),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: const Color(0xFFE1EAE6)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.name,
+                          style: const TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.w800, color: kInk)),
+                      const SizedBox(height: 4),
+                      Text('Rp ${item.formattedPrice} / Pcs',
+                          style: const TextStyle(
+                              color: Color.fromARGB(255, 141, 251, 85), fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 10),
+                      Text(item.description,
+                          style: const TextStyle(color: kMuted, height: 1.4)),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          _RoundBtn(icon: Icons.remove, onTap: () => _set(_qty - 1)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: _ctrl,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.w800),
+                              decoration: InputDecoration(
+                                labelText: 'Jumlah',
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14)),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide:
+                                      const BorderSide(color: kGreen, width: 2),
+                                ),
+                              ),
+                              onChanged: (v) =>
+                                  setState(() => _qty = int.tryParse(v) ?? 0),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          _RoundBtn(icon: Icons.add, onTap: () => _set(_qty + 1)),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Total',
+                              style: TextStyle(fontSize: 15, color: kMuted)),
+                          Text('Rp ${formatPrice(_qty * item.price)}',
+                              style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color.fromARGB(255, 141, 251, 85))),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-
-            // Kartu form
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.black12),
-              ),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: _deskripsiController,
-                    maxLines: 3,
-                    minLines: 3,
-                    decoration: _dekorasi(
-                      label: 'Deskripsi',
-                      ikon: Icons.description,
-                    ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Color.fromARGB(255, 28, 96, 255),
+                    foregroundColor: kInk,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
                   ),
-                  const SizedBox(height: 18),
-                  TextField(
-                    controller: _stokController,
-                    keyboardType: TextInputType.number,
-                    decoration: _dekorasi(
-                      label: 'Stok tersedia (pcs)',
-                      ikon: Icons.inventory_2,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  TextField(
-                    controller: _hargaController,
-                    keyboardType: TextInputType.number,
-                    decoration: _dekorasi(
-                      label: 'Harga (Rp)',
-                      ikon: Icons.attach_money,
-                      isDollar: true,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Tombol simpan
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                onPressed: _simpan,
-                icon: const Icon(Icons.save, size: 18, color: Colors.white),
-                label: const Text(
-                  'Simpan',
-                  style: TextStyle(color: Colors.white, fontSize: 13),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: warnaUtama,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+                  onPressed: _save,
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text('Simpan pesanan',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                 ),
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoundBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _RoundBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFEAF1EE),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Icon(icon, color: Color.fromARGB(255, 17, 116, 255)),
         ),
       ),
     );
   }
 }
+
 // ---------- Halaman Profil (STATELESS) ----------
 class ProfilePage extends StatelessWidget {
   final String name;
